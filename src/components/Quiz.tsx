@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { HER_NAME } from '../data/config'
 import { gifAssets } from '../data/gifAssets'
 import { quizQuestions, type QuizQuestion } from '../data/quiz'
-import { playSfxFile, playSuccess, playTyping } from '../lib/sfx'
+import { playSfxFile, playTyping } from '../lib/sfx'
 import Bear from './Bear'
 import GifImage from './GifImage'
 import PrimaryButton from './PrimaryButton'
@@ -149,7 +149,7 @@ function Quiz({ onContinue, introModalDismissed = true, introModalReady = introM
     setSelectedOption(option)
     setAnswered(true)
     if (correct) {
-      playSuccess()
+      void playSfxFile('correct.wav')
       return
     }
 
