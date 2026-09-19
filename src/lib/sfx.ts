@@ -15,9 +15,6 @@ const screenAudioNames = ['intro.wav', 'beating.wav', 'happy.wav', 'Crying.wav']
 
 export function initializeAudioContext() {
   if (audioContext) {
-    if (audioContext.state === 'suspended') {
-      void audioContext.resume().then(flushPendingTypingPlayback).catch(() => undefined)
-    }
     return audioContext
   }
   const AudioContextConstructor =
@@ -25,9 +22,6 @@ export function initializeAudioContext() {
     (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
   if (!AudioContextConstructor) return null
   audioContext = new AudioContextConstructor()
-  if (audioContext.state === 'suspended') {
-    void audioContext.resume().then(flushPendingTypingPlayback).catch(() => undefined)
-  }
   return audioContext
 }
 

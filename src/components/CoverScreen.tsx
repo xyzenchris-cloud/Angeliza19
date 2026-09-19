@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import type { MouseEvent } from 'react'
 import { useState } from 'react'
 import { HER_NAME } from '../data/config'
-import { initializeAudioContext, playIntro, prepareSfxFile } from '../lib/sfx'
+import { initializeAudioContext, playIntro, prepareSfxFile, unlockAudio } from '../lib/sfx'
 import PrimaryButton from './PrimaryButton'
 import GifImage from './GifImage'
 import { gifAssets } from '../data/gifAssets'
@@ -34,6 +34,7 @@ function CoverScreen({ onContinue, assetsReady }: CoverScreenProps) {
     event.currentTarget.style.display = 'none'
     setLandingStarted(true)
     initializeAudioContext()
+    void unlockAudio()
     prepareSfxFile('intro.wav')
     void playIntro()
   }
