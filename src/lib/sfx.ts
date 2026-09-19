@@ -1,4 +1,7 @@
 let audioContext: AudioContext | null = null
+let typingBuffer: AudioBuffer | null = null
+let currentTypingSource: AudioBufferSourceNode | null = null
+let typingStopTimer: number | null = null
 const bundledSfx = import.meta.glob('../assets/newSfx/*', {
   eager: true,
   import: 'default',
@@ -7,8 +10,6 @@ const bundledSfx = import.meta.glob('../assets/newSfx/*', {
 const warnedSfx = new Set<string>()
 const preparedSfx = new Map<string, HTMLAudioElement>()
 const activeSfx = new Map<string, HTMLAudioElement>()
-let typingStopTimer: number | null = null
-let typingTickStopTimer: number | null = null
 const screenAudioNames = ['intro.wav', 'beating.wav', 'happy.wav', 'Crying.wav']
 
 export function initializeAudioContext() {
@@ -29,6 +30,14 @@ export function unlockAudio() {
   const context = audioContext
   if (!context || context.state === 'running') return Promise.resolve()
   return context.resume().catch(() => undefined)
+}
+
+export async function preloadTypingSound(context: AudioContext) {
+  if (typingBuffer) return
+  const response = await fetch('/sfx/typing.wav')
+  if (!response.ok) throw new Error(`typing.wav failed to load: ${response.status}`)
+  const arrayBuffer = await response.arrayBuffer()
+  typingBuffer = await context.decodeAudioData(arrayBuffer)
 }
 
 function tone(
@@ -85,30 +94,39 @@ export function playPop() {
   tone(720, 0.12, 'triangle', 0, 0.04)
 }
 
-export function playTyping(volume = 0.8, durationMs = 6000) {
+export function playTyping() {
+  if (!typingBuffer || !audioContext) return
   if (typingStopTimer !== null) {
     window.clearTimeout(typingStopTimer)
     typingStopTimer = null
   }
-  void playSfxFile('typing.wav', volume)
-  typingStopTimer = window.setTimeout(() => {
-    stopSfxFile('typing.wav')
-    typingStopTimer = null
-  }, durationMs)
-}
+  if (currentTypingSource) {
+    try {
+      currentTypingSource.stop()
+    } catch {
+      // The source may already have been stopped by its duration timer.
+    }
+    currentTypingSource.disconnect()
+    currentTypingSource = null
+  }
 
-export async function playTypingTick(volume = 0.8) {
-  if (typingTickStopTimer !== null) {
-    window.clearTimeout(typingTickStopTimer)
-    typingTickStopTimer = null
-  }
-  const started = await playSfxFile('typing.wav', volume)
-  if (started) {
-    typingTickStopTimer = window.setTimeout(() => {
-      stopSfxFile('typing.wav')
-      typingTickStopTimer = null
-    }, 120)
-  }
+  const source = audioContext.createBufferSource()
+  const gain = audioContext.createGain()
+  source.buffer = typingBuffer
+  source.loop = true
+  gain.gain.value = 0.5
+  source.connect(gain).connect(audioContext.destination)
+  source.start(audioContext.currentTime)
+  currentTypingSource = source
+  if (audioContext.state === 'suspended') void audioContext.resume()
+  typingStopTimer = window.setTimeout(() => {
+    if (currentTypingSource === source) {
+      source.stop()
+      source.disconnect()
+      currentTypingSource = null
+    }
+    typingStopTimer = null
+  }, 3500)
 }
 
 export function playChime() {

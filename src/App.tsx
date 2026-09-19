@@ -85,13 +85,13 @@ function App() {
 
   return (
     <>
-      <AppContent />
+      <AppContent assetsReady={assetsReady} />
       <AnimatePresence>{!assetsReady && <LoadingScreen />}</AnimatePresence>
     </>
   )
 }
 
-function AppContent() {
+function AppContent({ assetsReady }: { assetsReady: boolean }) {
   const [unlockedIndex, setUnlockedIndex] = useState(0)
   const [currentScreen, setCurrentScreen] = useState<Screen>('cover')
   const [gameIntroDismissed, setGameIntroDismissed] = useState(false)
@@ -154,6 +154,7 @@ function AppContent() {
             quizIntroDismissed={quizIntroDismissed}
             quizIntroReady={quizIntroReady}
             finaleIntroDismissed={finaleIntroDismissed}
+            assetsReady={assetsReady}
           />
         </motion.section>
       </AnimatePresence>
@@ -205,6 +206,7 @@ function ScreenContent({
   quizIntroDismissed,
   quizIntroReady,
   finaleIntroDismissed,
+  assetsReady,
 }: {
   screen: Screen
   onContinue: () => void
@@ -212,8 +214,9 @@ function ScreenContent({
   quizIntroDismissed: boolean
   quizIntroReady: boolean
   finaleIntroDismissed: boolean
+  assetsReady: boolean
 }) {
-  if (screen === 'cover') return <CoverScreen onContinue={onContinue} />
+  if (screen === 'cover') return <CoverScreen onContinue={onContinue} assetsReady={assetsReady} />
   if (screen === 'catch') return <CatchGame onContinue={onContinue} introModalDismissed={gameIntroDismissed} />
   if (screen === 'quiz') {
     return (

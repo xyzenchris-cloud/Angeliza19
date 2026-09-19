@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import type { MouseEvent } from 'react'
 import { useEffect, useState } from 'react'
 import { HER_NAME } from '../data/config'
-import { initializeAudioContext, playIntro, playTypingTick, prepareSfxFile } from '../lib/sfx'
+import { initializeAudioContext, playIntro, prepareSfxFile } from '../lib/sfx'
 import PrimaryButton from './PrimaryButton'
 import GifImage from './GifImage'
 import { gifAssets } from '../data/gifAssets'
@@ -14,56 +14,20 @@ const VOLUME_HINT = 'Turn on full volume for maximum experience'
 
 type CoverScreenProps = {
   onContinue: () => void
+  assetsReady: boolean
 }
 
-function CoverScreen({ onContinue }: CoverScreenProps) {
+function CoverScreen({ onContinue, assetsReady }: CoverScreenProps) {
   const [landingStarted, setLandingStarted] = useState(false)
-  const [typedMessage, setTypedMessage] = useState('')
-  const [typedSignature, setTypedSignature] = useState('')
   const [sequenceComplete, setSequenceComplete] = useState(false)
-  const volumeHint = useTypewriter(VOLUME_HINT, 220, !landingStarted, () => {
-    void playTypingTick()
-  })
+  const volumeHint = useTypewriter(VOLUME_HINT, 35, assetsReady && !landingStarted)
 
   useEffect(() => {
     if (!landingStarted) return
 
     setSequenceComplete(false)
-    let messageIndex = 0
-    let signatureIndex = 0
-    let typingTimer: ReturnType<typeof window.setTimeout> | null = null
-    let signatureTimer: ReturnType<typeof window.setTimeout> | null = null
-    let signatureInterval: ReturnType<typeof window.setInterval> | null = null
-
-    let messageInterval: ReturnType<typeof window.setInterval> | null = null
-    typingTimer = window.setTimeout(() => {
-      messageInterval = window.setInterval(() => {
-        messageIndex += 1
-        setTypedMessage(LANDING_MESSAGE.slice(0, messageIndex))
-
-        if (messageIndex >= LANDING_MESSAGE.length) {
-          if (messageInterval !== null) window.clearInterval(messageInterval)
-          signatureTimer = window.setTimeout(() => {
-            signatureInterval = window.setInterval(() => {
-              signatureIndex += 1
-              setTypedSignature(LANDING_SIGNATURE.slice(0, signatureIndex))
-
-              if (signatureIndex >= LANDING_SIGNATURE.length) {
-                if (signatureInterval !== null) window.clearInterval(signatureInterval)
-                setSequenceComplete(true)
-              }
-            }, 150)
-          }, 280)
-        }
-      }, 150)
-    }, 1500)
-
-    return () => {
-      if (typingTimer !== null) window.clearTimeout(typingTimer)
-      if (messageInterval !== null) window.clearInterval(messageInterval)
-      if (signatureTimer !== null) window.clearTimeout(signatureTimer)
-      if (signatureInterval !== null) window.clearInterval(signatureInterval)
-    }
+    const timer = window.setTimeout(() => setSequenceComplete(true), 1500)
+    return () => window.clearTimeout(timer)
   }, [landingStarted])
 
   const beginLandingSequence = (event: MouseEvent<HTMLButtonElement>) => {
@@ -72,8 +36,6 @@ function CoverScreen({ onContinue }: CoverScreenProps) {
     setSequenceComplete(false)
     initializeAudioContext()
     prepareSfxFile('intro.wav')
-    prepareSfxFile('typing.wav')
-    void playTypingTick()
     void playIntro()
   }
 
@@ -110,12 +72,8 @@ function CoverScreen({ onContinue }: CoverScreenProps) {
         />
 
         <p className={`${landingStarted ? 'seq-3' : 'landing-seq'} mx-auto mt-4 min-h-[88px] max-w-xs text-lg text-muted`}>
-          <span aria-hidden="true">{typedMessage}</span>
-          <span className="mt-1 block">{typedSignature}</span>
-          <span className="sr-only">
-            {LANDING_MESSAGE}
-            {` ${LANDING_SIGNATURE}`}
-          </span>
+          {LANDING_MESSAGE}
+          <span className="mt-1 block">{LANDING_SIGNATURE}</span>
         </p>
 
         <div className={sequenceComplete ? 'seq-4' : 'landing-action-placeholder'}>

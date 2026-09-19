@@ -1,7 +1,8 @@
 import PrimaryButton from './PrimaryButton'
 import { useEffect, useRef, useState } from 'react'
 import GifImage from './GifImage'
-import { playSfxFile, playTyping, stopSfxFile } from '../lib/sfx'
+import { playSfxFile, stopSfxFile } from '../lib/sfx'
+import { useTypewriter } from '../hooks/useTypewriter'
 
 type GameIntroModalProps = {
   open: boolean
@@ -30,12 +31,9 @@ function GameIntroModal({
 }: GameIntroModalProps) {
   const [mounted, setMounted] = useState(open)
   const [closing, setClosing] = useState(false)
-  const [typedMessage, setTypedMessage] = useState(open ? message : '')
-  const [typingComplete, setTypingComplete] = useState(false)
+  const typedMessage = useTypewriter(message, 35, open)
   const closeTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null)
   const soundTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null)
-  const typingTimer = useRef<ReturnType<typeof window.setInterval> | null>(null)
-  const typingAudioKey = useRef<string | null>(null)
 
   useEffect(() => {
     if (closeTimer.current !== null) {
@@ -91,54 +89,12 @@ function GameIntroModal({
   }, [introSound, open])
 
   useEffect(() => {
-    if (typingTimer.current !== null) {
-      window.clearInterval(typingTimer.current)
-      typingTimer.current = null
-    }
-
-    if (!open) {
-      setTypedMessage('')
-      setTypingComplete(false)
-      typingAudioKey.current = null
-      return
-    }
-
-    let characterIndex = 0
-    setTypedMessage('')
-    setTypingComplete(false)
-    if (typingAudioKey.current !== message) {
-      typingAudioKey.current = message
-      playTyping()
-    }
-    typingTimer.current = window.setInterval(() => {
-      characterIndex += 1
-      setTypedMessage(message.slice(0, characterIndex))
-
-      if (characterIndex >= message.length && typingTimer.current !== null) {
-        window.clearInterval(typingTimer.current)
-        typingTimer.current = null
-        setTypingComplete(true)
-      }
-    }, 64)
-
-    return () => {
-      if (typingTimer.current !== null) {
-        window.clearInterval(typingTimer.current)
-        typingTimer.current = null
-      }
-    }
-  }, [message, open])
-
-  useEffect(() => {
     return () => {
       if (closeTimer.current !== null) {
         window.clearTimeout(closeTimer.current)
       }
       if (soundTimer.current !== null) {
         window.clearTimeout(soundTimer.current)
-      }
-      if (typingTimer.current !== null) {
-        window.clearInterval(typingTimer.current)
       }
     }
   }, [])
@@ -178,11 +134,12 @@ function GameIntroModal({
               {title}
             </h2>
             <p id="game-intro-description" className="mt-3 min-h-[4.65rem] text-lg leading-snug text-muted" aria-live="polite">
-              <span aria-hidden="true">{typedMessage}</span>
+              <span aria-hidden="true">{typedMessage.text}</span>
+              {!typedMessage.complete && <span className="typing-cursor" aria-hidden="true">|</span>}
               <span className="sr-only">{message}</span>
             </p>
-            <div className={typingComplete ? 'modal-action-reveal' : 'modal-action-placeholder'}>
-              <PrimaryButton className="mx-auto mt-6" onClick={handleDismiss} disabled={!typingComplete || closing}>
+            <div className={typedMessage.complete ? 'modal-action-reveal' : 'modal-action-placeholder'}>
+              <PrimaryButton className="mx-auto mt-6" onClick={handleDismiss} disabled={!typedMessage.complete || closing}>
                 {buttonLabel}
               </PrimaryButton>
             </div>

@@ -1,17 +1,16 @@
 import { motion } from 'framer-motion'
 import { Heart, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { HER_NAME } from '../data/config'
 import { gifAssets } from '../data/gifAssets'
-import { quizQuestions } from '../data/quiz'
-import { playSfxFile, playSuccess, playTypingTick } from '../lib/sfx'
+import { quizQuestions, type QuizQuestion } from '../data/quiz'
+import { playSfxFile, playSuccess, playTyping } from '../lib/sfx'
 import Bear from './Bear'
 import GifImage from './GifImage'
 import PrimaryButton from './PrimaryButton'
-import { useTypewriter } from '../hooks/useTypewriter'
 
 const STARTING_LIVES = 3
-const TYPE_SPEED_MS = 176
+const TYPE_SPEED_MS = 110
 const OPTION_STAGGER_MS = 420
 
 function shuffle<T>(items: T[]): T[] {
@@ -29,6 +28,56 @@ type QuizProps = {
   introModalReady?: boolean
 }
 
+function QuizQuestionText({
+  question,
+  enabled,
+  onComplete,
+}: {
+  question: QuizQuestion
+  enabled: boolean
+  onComplete: () => void
+}) {
+  const [displayed, setDisplayed] = useState('')
+  const intervalRef = useRef<number | null>(null)
+  const onCompleteRef = useRef(onComplete)
+  onCompleteRef.current = onComplete
+
+  useEffect(() => {
+    setDisplayed('')
+    if (intervalRef.current !== null) {
+      window.clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+    if (!enabled) return
+
+    playTyping()
+    let characterIndex = 0
+    intervalRef.current = window.setInterval(() => {
+      characterIndex += 1
+      setDisplayed(question.question.slice(0, characterIndex))
+      if (characterIndex >= question.question.length && intervalRef.current !== null) {
+        window.clearInterval(intervalRef.current)
+        intervalRef.current = null
+        onCompleteRef.current()
+      }
+    }, TYPE_SPEED_MS)
+
+    return () => {
+      if (intervalRef.current !== null) {
+        window.clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+  }, [enabled, question.id])
+
+  return (
+    <>
+      {displayed}
+      {displayed.length < question.question.length && <span className="typing-cursor" aria-hidden="true">|</span>}
+    </>
+  )
+}
+
 function Quiz({ onContinue, introModalDismissed = true, introModalReady = introModalDismissed }: QuizProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answered, setAnswered] = useState(false)
@@ -37,6 +86,7 @@ function Quiz({ onContinue, introModalDismissed = true, introModalReady = introM
   const [showFailModal, setShowFailModal] = useState(false)
   const [failModalClosing, setFailModalClosing] = useState(false)
   const [quizReady, setQuizReady] = useState(introModalReady && introModalDismissed)
+  const [questionTypingComplete, setQuestionTypingComplete] = useState(false)
   const [lives, setLives] = useState(STARTING_LIVES)
   const [lostHeartIndex, setLostHeartIndex] = useState<number | null>(null)
   const [shuffledOptions] = useState(() =>
@@ -45,21 +95,21 @@ function Quiz({ onContinue, introModalDismissed = true, introModalReady = introM
   const question = quizQuestions[currentIndex]
   const options = useMemo(() => shuffledOptions[currentIndex], [currentIndex, shuffledOptions])
   const isCorrect = selectedOption !== null && question.correctAnswers.includes(selectedOption)
-  const typedQuestion = useTypewriter(question.question, TYPE_SPEED_MS, quizReady, () => {
-    void playTypingTick()
-  })
-
   useEffect(() => {
     setQuizReady(introModalReady && introModalDismissed)
   }, [introModalDismissed, introModalReady])
 
   useEffect(() => {
-    if (!typedQuestion.complete || !quizReady) return
+    setQuestionTypingComplete(false)
+  }, [question.id])
+
+  useEffect(() => {
+    if (!questionTypingComplete || !quizReady) return
     const timers = options.map((_, index) =>
       window.setTimeout(() => void playSfxFile('pop.wav', 0.5), index * OPTION_STAGGER_MS),
     )
     return () => timers.forEach((timer) => window.clearTimeout(timer))
-  }, [options, quizReady, typedQuestion.complete])
+  }, [options, questionTypingComplete, quizReady])
 
   useEffect(() => {
     if (!answered) return
@@ -94,7 +144,7 @@ function Quiz({ onContinue, introModalDismissed = true, introModalReady = introM
   }
 
   const handleAnswer = (option: string) => {
-    if (answered || !quizReady || !typedQuestion.complete) return
+    if (answered || !quizReady || !questionTypingComplete) return
     const correct = question.correctAnswers.includes(option)
     setSelectedOption(option)
     setAnswered(true)
@@ -164,17 +214,20 @@ function Quiz({ onContinue, introModalDismissed = true, introModalReady = introM
       </div>
 
       <p className="mb-2 min-h-6 text-sm font-bold uppercase tracking-wide text-heart-strong">
-        {typedQuestion.complete ? 'Choose your answer' : 'Thinking...'}
+        {questionTypingComplete ? 'Choose your answer' : 'Thinking...'}
       </p>
       <h2 className="min-h-[4.5rem] font-display text-3xl font-bold leading-tight text-ink">
-        {typedQuestion.text}
-        {!typedQuestion.complete && <span className="typing-cursor" aria-hidden="true">|</span>}
+        <QuizQuestionText
+          question={question}
+          enabled={quizReady}
+          onComplete={() => setQuestionTypingComplete(true)}
+        />
       </h2>
       <div className="my-5">
         <Bear character="dudu" pose={answered ? (isCorrect ? 'happy' : 'sad') : 'idle'} />
       </div>
       <div className="flex min-h-[13.5rem] flex-col gap-3" role="group" aria-label="Answer options">
-        {typedQuestion.complete &&
+        {questionTypingComplete &&
           options.map((option, index) => {
             const selected = selectedOption === option
             const correct = answered && selected && isCorrect

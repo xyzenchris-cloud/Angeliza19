@@ -1,5 +1,6 @@
 import { allGifAssets } from '../data/gifAssets'
 import pawImage from '../assets/ui/paw.png'
+import { initializeAudioContext, preloadTypingSound } from './sfx'
 
 const clutterImageUrls = Object.values(
   import.meta.glob('../images/*.{jpg,jpeg,png,webp}', { eager: true, import: 'default', query: '?url' }),
@@ -65,6 +66,7 @@ export function preloadAllAssets() {
   if (allAssetsPromise) return allAssetsPromise
 
   const audioAssetUrls = Object.values(audioUrls)
+  const context = initializeAudioContext()
   allAssetsPromise = Promise.allSettled([
     ...allGifAssets.map(preloadImage),
     ...clutterImageUrls.map(preloadImage),
@@ -72,6 +74,7 @@ export function preloadAllAssets() {
     ...Object.values(voiceoverUrls).map(preloadAudio),
     preloadImage(pawImage),
     preloadLottie(),
+    context ? preloadTypingSound(context) : Promise.resolve(),
   ]).then(() => undefined)
 
   return allAssetsPromise
