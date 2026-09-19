@@ -19,7 +19,7 @@ type CoverScreenProps = {
 
 function CoverScreen({ onContinue, assetsReady }: CoverScreenProps) {
   const [landingStarted, setLandingStarted] = useState(false)
-  const volumeHint = useTypewriter(VOLUME_HINT, 35, assetsReady && !landingStarted)
+  const volumeHint = useTypewriter(VOLUME_HINT, 35, assetsReady && !landingStarted, false)
   const landingTyping = useTypewriter(
     `${LANDING_MESSAGE}\n${LANDING_SIGNATURE}`,
     75,
