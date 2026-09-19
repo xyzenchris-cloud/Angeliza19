@@ -69,13 +69,21 @@ function CoverScreen({ onContinue, assetsReady }: CoverScreenProps) {
           draggable={false}
         />
 
-        <p className={`${landingStarted ? 'seq-3' : 'landing-seq'} mx-auto mt-4 min-h-[88px] max-w-xs text-lg text-muted`}>
-          <span aria-hidden="true">{messageText}</span>
-          <span className="mt-1 block" aria-hidden="true">{signatureText}</span>
-          {!landingTyping.complete && landingStarted && <span className="typing-cursor" aria-hidden="true">|</span>}
-          <span className="sr-only">
-            {LANDING_MESSAGE}
-            {` ${LANDING_SIGNATURE}`}
+        <p
+          className={`${landingStarted ? 'seq-3' : 'landing-seq'} mx-auto mt-4 min-h-[88px] max-w-xs text-lg text-muted`}
+          aria-label={`${LANDING_MESSAGE} ${LANDING_SIGNATURE}`}
+        >
+          <span aria-hidden="true">
+            <span>{messageText}</span>
+            {!landingTyping.complete && landingStarted && signatureText.length === 0 && (
+              <span className="typing-cursor" aria-hidden="true">|</span>
+            )}
+            <span className="mt-1 block">
+              {signatureText}
+              {!landingTyping.complete && signatureText.length > 0 && (
+                <span className="typing-cursor" aria-hidden="true">|</span>
+              )}
+            </span>
           </span>
         </p>
 
