@@ -5,6 +5,7 @@ export function useTypewriter(
   text: string,
   speedMs: number,
   enabled = true,
+  playSound = true,
 ) {
   const [visibleLength, setVisibleLength] = useState(0)
   const intervalRef = useRef<number | null>(null)
@@ -18,7 +19,7 @@ export function useTypewriter(
     setVisibleLength(0)
     if (!enabled || text.length === 0) return
 
-    playTyping()
+    if (playSound) playTyping()
     let characterIndex = 0
     intervalRef.current = window.setInterval(() => {
       characterIndex += 1
@@ -36,7 +37,7 @@ export function useTypewriter(
         intervalRef.current = null
       }
     }
-  }, [enabled, speedMs, text])
+  }, [enabled, playSound, speedMs, text])
 
   return {
     text: text.slice(0, visibleLength),

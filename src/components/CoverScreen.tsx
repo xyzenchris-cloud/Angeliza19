@@ -24,6 +24,7 @@ function CoverScreen({ onContinue, assetsReady }: CoverScreenProps) {
     `${LANDING_MESSAGE}\n${LANDING_SIGNATURE}`,
     75,
     landingStarted,
+    false,
   )
   const messageText = landingTyping.text.slice(0, LANDING_MESSAGE.length)
   const signatureStart = LANDING_MESSAGE.length + 1

@@ -2,6 +2,7 @@ let audioContext: AudioContext | null = null
 let typingBuffer: AudioBuffer | null = null
 let currentTypingSource: AudioBufferSourceNode | null = null
 let typingStopTimer: number | null = null
+let pendingTypingPlayback = false
 const bundledSfx = import.meta.glob('../assets/newSfx/*', {
   eager: true,
   import: 'default',
@@ -14,7 +15,9 @@ const screenAudioNames = ['intro.wav', 'beating.wav', 'happy.wav', 'Crying.wav']
 
 export function initializeAudioContext() {
   if (audioContext) {
-    if (audioContext.state === 'suspended') void audioContext.resume()
+    if (audioContext.state === 'suspended') {
+      void audioContext.resume().then(flushPendingTypingPlayback).catch(() => undefined)
+    }
     return audioContext
   }
   const AudioContextConstructor =
@@ -22,14 +25,16 @@ export function initializeAudioContext() {
     (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
   if (!AudioContextConstructor) return null
   audioContext = new AudioContextConstructor()
-  if (audioContext.state === 'suspended') void audioContext.resume()
+  if (audioContext.state === 'suspended') {
+    void audioContext.resume().then(flushPendingTypingPlayback).catch(() => undefined)
+  }
   return audioContext
 }
 
 export function unlockAudio() {
   const context = audioContext
   if (!context || context.state === 'running') return Promise.resolve()
-  return context.resume().catch(() => undefined)
+  return context.resume().then(flushPendingTypingPlayback).catch(() => undefined)
 }
 
 export async function preloadTypingSound(context: AudioContext) {
@@ -96,6 +101,10 @@ export function playPop() {
 
 export function playTyping() {
   if (!typingBuffer || !audioContext) return
+  if (audioContext.state !== 'running') {
+    pendingTypingPlayback = true
+    return
+  }
   if (typingStopTimer !== null) {
     window.clearTimeout(typingStopTimer)
     typingStopTimer = null
@@ -118,7 +127,6 @@ export function playTyping() {
   source.connect(gain).connect(audioContext.destination)
   source.start(audioContext.currentTime)
   currentTypingSource = source
-  if (audioContext.state === 'suspended') void audioContext.resume()
   typingStopTimer = window.setTimeout(() => {
     if (currentTypingSource === source) {
       source.stop()
@@ -127,6 +135,12 @@ export function playTyping() {
     }
     typingStopTimer = null
   }, 3500)
+}
+
+function flushPendingTypingPlayback() {
+  if (!pendingTypingPlayback) return
+  pendingTypingPlayback = false
+  playTyping()
 }
 
 export function playChime() {
