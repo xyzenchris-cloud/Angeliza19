@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import type { MouseEvent } from 'react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { HER_NAME } from '../data/config'
 import { initializeAudioContext, playIntro, prepareSfxFile } from '../lib/sfx'
 import PrimaryButton from './PrimaryButton'
@@ -19,21 +19,19 @@ type CoverScreenProps = {
 
 function CoverScreen({ onContinue, assetsReady }: CoverScreenProps) {
   const [landingStarted, setLandingStarted] = useState(false)
-  const [sequenceComplete, setSequenceComplete] = useState(false)
   const volumeHint = useTypewriter(VOLUME_HINT, 35, assetsReady && !landingStarted)
-
-  useEffect(() => {
-    if (!landingStarted) return
-
-    setSequenceComplete(false)
-    const timer = window.setTimeout(() => setSequenceComplete(true), 1500)
-    return () => window.clearTimeout(timer)
-  }, [landingStarted])
+  const landingTyping = useTypewriter(
+    `${LANDING_MESSAGE}\n${LANDING_SIGNATURE}`,
+    75,
+    landingStarted,
+  )
+  const messageText = landingTyping.text.slice(0, LANDING_MESSAGE.length)
+  const signatureStart = LANDING_MESSAGE.length + 1
+  const signatureText = landingTyping.text.slice(signatureStart)
 
   const beginLandingSequence = (event: MouseEvent<HTMLButtonElement>) => {
     event.currentTarget.style.display = 'none'
     setLandingStarted(true)
-    setSequenceComplete(false)
     initializeAudioContext()
     prepareSfxFile('intro.wav')
     void playIntro()
@@ -72,12 +70,17 @@ function CoverScreen({ onContinue, assetsReady }: CoverScreenProps) {
         />
 
         <p className={`${landingStarted ? 'seq-3' : 'landing-seq'} mx-auto mt-4 min-h-[88px] max-w-xs text-lg text-muted`}>
-          {LANDING_MESSAGE}
-          <span className="mt-1 block">{LANDING_SIGNATURE}</span>
+          <span aria-hidden="true">{messageText}</span>
+          <span className="mt-1 block" aria-hidden="true">{signatureText}</span>
+          {!landingTyping.complete && landingStarted && <span className="typing-cursor" aria-hidden="true">|</span>}
+          <span className="sr-only">
+            {LANDING_MESSAGE}
+            {` ${LANDING_SIGNATURE}`}
+          </span>
         </p>
 
-        <div className={sequenceComplete ? 'seq-4' : 'landing-action-placeholder'}>
-          <PrimaryButton className="mx-auto mt-7" onClick={onContinue} disabled={!sequenceComplete}>
+        <div className={landingTyping.complete ? 'seq-4' : 'landing-action-placeholder'}>
+          <PrimaryButton className="mx-auto mt-7" onClick={onContinue} disabled={!landingTyping.complete}>
             Let&apos;s go »
           </PrimaryButton>
         </div>
